@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # deep_q_learning
 This is the Code for "Deep Q Learning - The Math of Intelligence #9" By Siraj Raval on Youtube
 
@@ -25,3 +26,6 @@ Just run `jupyter notebook` in terminal and the code will run. If you'd like to 
 ## Credit
 
 The credit for this code goes to [PeterWittek](https://github.com/peterwittek/qml-rg/tree/a9972750dc25c3d906dc1c4fa764992317453eb9). I've merely created a wrapper to get people started.
+=======
+# 6867-project
+>>>>>>> 940ebbbd3825d7ac3936c6a15832b869ba2044db
