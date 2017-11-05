@@ -16,7 +16,7 @@ tf.logging.set_verbosity(tf.logging.INFO)
 
 class Agent:
     def __init__(self):
-        self.env = gym.make('CartPole-v0') # environment
+        self.env = gym.make('TimePilot-v0') # environment
         self.num_actions = self.env.action_space.n # number of possible actions
         self.capacity = 1000000 # replay memory capacity
         self.train_time = 10000000 # number of total frames to train
@@ -29,7 +29,8 @@ class Agent:
         self.batch_size = 32 # batch size for experience replay
 
         self.graph = tf.Graph()
-        self.build_graph()
+        with self.graph.as_default():
+            self.build_graph()
 
     def build_graph(self):
         """
@@ -78,7 +79,6 @@ class Agent:
                 inputs = conv2_flat, 
                 units = 256, 
                 activation = tf.nn.relu)
-        print(dense.shape)
         assert(dense.shape[1] == 256)
 
         # input tensor shape: [batch_size, 256]
@@ -124,8 +124,8 @@ class Agent:
         Since phi only stores the last 4 observations, 
         we rollback phi and insert obs (like a queue).
         """
-        obs = np.reshape(self.process_image(obs), (1, 110, 84, 1))
-        self.phi = np.concatenate(self.phi[:, :, :, 1:], obs)
+        obs = np.reshape(self.process_image(obs), (1, 84, 84, 1))
+        self.phi = np.concatenate([self.phi[:, :, :, 1:], obs], axis = 3)
 
     def train(self, session):
         """
@@ -134,7 +134,7 @@ class Agent:
         using RMSProp.
         """
 
-        batch = random.sample(self.D, self.batch_size)
+        batch = random.sample(self.D, min(self.batch_size, len(self.D)))
 
         batch_input = np.concatenate(list(map(lambda x : x[3], batch)), axis = 0)
         Q_max = session.run(self.Q_max, feed_dict = {self.input_layer: batch_input})
@@ -154,8 +154,8 @@ class Agent:
         on the kth step and trains with experience replay.
         """
 
-        if t % 1000 == 0:
-            print('Step {}:'.format(t))
+        #if t % 1000 == 0:
+        print('Step {}:'.format(t))
 
         # start a new episode
         if self.done:
