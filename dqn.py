@@ -16,10 +16,7 @@ tf.logging.set_verbosity(tf.logging.INFO)
 
 class Agent:
     def __init__(self):
-        self.graph = tf.Graph()
-        self.build_graph()
-
-        self.env = gym.make('TimePilot-v0') # environment
+        self.env = gym.make('CartPole-v0') # environment
         self.num_actions = self.env.action_space.n # number of possible actions
         self.capacity = 1000000 # replay memory capacity
         self.train_time = 10000000 # number of total frames to train
@@ -28,7 +25,11 @@ class Agent:
         self.k = 4 # frame skipping
         self.done = True # is it the start of a new episode?
         self.phi = np.zeros([1, 84, 84, 4]) # processed inputs
+        self.gamma = 0.9
         self.batch_size = 32 # batch size for experience replay
+
+        self.graph = tf.Graph()
+        self.build_graph()
 
     def build_graph(self):
         """
@@ -45,39 +46,40 @@ class Agent:
         self.a_ = tf.placeholder(tf.int32, shape = [None])
 
         # input tensor shape: [batch_size, 84, 84, 4]
-        # output tensor shape: [batch_size, 20, 20, 16]
+        # output tensor shape: [batch_size, 21, 21, 16]
         conv1 = tf.layers.conv2d(
                 inputs = self.input_layer, 
                 filters = 16, 
                 kernel_size = [8, 8], 
                 strides = 4, 
-                padding = 'valid', 
+                padding = 'same', 
                 activation = tf.nn.relu)
-        assert(conv1.shape == [batch_size, 20, 20, 16])
+        assert(conv1.shape[1:4] == [21, 21, 16])
 
-        # input tensor shape: [batch_size, 20, 20, 16]
-        # output tensor shape: [batch_size, 15, 15, 32]
+        # input tensor shape: [batch_size, 21, 21, 16]
+        # output tensor shape: [batch_size, 11, 11, 32]
         conv2 = tf.layers.conv2d(
                 inputs = conv1, 
                 filters = 32, 
                 kernel_size = [4, 4], 
                 strides = 2, 
-                padding = 'valid', 
+                padding = 'same', 
                 activation = tf.nn.relu)
-        assert(conv2.shape == [batch_size, 15, 15, 32])
+        assert(conv2.shape[1:4] == [11, 11, 32])
 
         # flatten tensor into a batch of vectors
-        # input tensor shape: [batch_size, 15, 15, 32]
-        # output tensor shape: [batch_size, 15 * 15 * 32]
-        conv2_flat = tf.reshape(conv2, [-1, 15 * 15 * 32])
+        # input tensor shape: [batch_size, 11, 11, 32]
+        # output tensor shape: [batch_size, 11 * 11 * 32]
+        conv2_flat = tf.reshape(conv2, [-1, 11 * 11 * 32])
 
-        # input tensor shape: [batch_size, 15 * 15 * 32]
+        # input tensor shape: [batch_size, 11 * 11 * 32]
         # output tensor shape: [batch_size, 256]
         dense = tf.layers.dense(
-                inputs = conv2, 
+                inputs = conv2_flat, 
                 units = 256, 
                 activation = tf.nn.relu)
-        assert(dense.shape == [batch_size, 256])
+        print(dense.shape)
+        assert(dense.shape[1] == 256)
 
         # input tensor shape: [batch_size, 256]
         # output tensor shape: [batch_size, num_actions]
@@ -89,17 +91,17 @@ class Agent:
         # one hot representation of data set actions
         # input size: [batch_size]
         # output size: [batch_size, num_actions]
-        a_one_hot = tf.one_hot(a_, depth = num_actions,
-                on_value = True, off_val = False, dtype = tf.bool)
+        a_one_hot = tf.one_hot(self.a_, depth = self.num_actions,
+                on_value = True, off_value = False, dtype = tf.bool)
 
         # then we just select the actions we want from Q_vals
         Q_vals_a = tf.reshape(tf.boolean_mask(Q_vals, a_one_hot), [-1])
-        self.loss = tf.reduce_sum((y_ - Q_vals_a) ** 2)
+        self.loss = tf.reduce_sum((self.y_ - Q_vals_a) ** 2)
 
         self.optimizer = tf.train.RMSPropOptimizer(0.1).minimize(self.loss)
 
         self.pred = tf.argmax(Q_vals, axis = 1)
-        self.Q_max = tf.max(Q_vals, axis = 1)
+        self.Q_max = tf.reduce_max(Q_vals, axis = 1)
 
     def step_eps(self):
         """
@@ -144,7 +146,7 @@ class Agent:
         batch_input = np.concatenate(list(map(lambda x : x[0], batch)), axis = 0)
         # train gradient descent
         session.run(self.optimizer, feed_dict = {self.input_layer: batch_input, 
-            self.y_ = y_, self.a_ = a_})
+            self.y_: y_, self.a_: a_})
 
     def step_env(self, session, t):
         """
@@ -157,7 +159,7 @@ class Agent:
 
         # start a new episode
         if self.done:
-            obs = env.reset()
+            obs = self.env.reset()
             self.update_phi(obs) # I don't think we need this actually
             self.done = False
 
@@ -197,7 +199,8 @@ class Agent:
                 self.step_env(session, t)
 
 def main(unused_argv):
-    pass
+    agent = Agent()
+    agent.run_env()
 
 if __name__ == '__main__':
     tf.app.run()
