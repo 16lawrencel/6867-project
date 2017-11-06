@@ -157,6 +157,8 @@ class Agent:
         on the kth step and trains with experience replay.
         """
 
+        self.env.render() # comment this out if you don't want to see awesome video game playing :'(
+
         print('Step {}'.format(t))
 
         # start a new episode
