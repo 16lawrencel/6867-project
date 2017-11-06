@@ -7,6 +7,8 @@ import numpy as np
 import tensorflow as tf
 import gym
 
+import os
+import time
 import random
 from skimage.transform import resize
 from skimage.color import rgb2gray
@@ -27,6 +29,7 @@ class Agent:
         self.phi = np.zeros([1, 84, 84, 4]) # processed inputs
         self.gamma = 0.9
         self.batch_size = 32 # batch size for experience replay
+        self.save_path = 'ckpts/model' # save path for saving / loading variables
 
         self.graph = tf.Graph()
         with self.graph.as_default():
@@ -138,15 +141,15 @@ class Agent:
 
         batch_input = np.concatenate(list(map(lambda x : x[3], batch)), axis = 0)
         Q_max = session.run(self.Q_max, feed_dict = {self.input_layer: batch_input})
-        Q_max = np.array(Q_max)
 
         done_mask = np.array(list(map(lambda x : int(x[4]), batch)))
         y_ = np.array(list(map(lambda x : x[2], batch))) + self.gamma * Q_max * done_mask
         a_ = np.array(list(map(lambda x : x[1], batch)))
+
         batch_input = np.concatenate(list(map(lambda x : x[0], batch)), axis = 0)
+
         # train gradient descent
-        session.run(self.optimizer, feed_dict = {self.input_layer: batch_input, 
-            self.y_: y_, self.a_: a_})
+        session.run(self.optimizer, feed_dict = {self.input_layer: batch_input, self.y_: y_, self.a_: a_})
 
     def step_env(self, session, t):
         """
@@ -154,8 +157,7 @@ class Agent:
         on the kth step and trains with experience replay.
         """
 
-        #if t % 1000 == 0:
-        print('Step {}:'.format(t))
+        print('Step {}'.format(t))
 
         # start a new episode
         if self.done:
@@ -192,11 +194,24 @@ class Agent:
         Runs and trains in the environment for M * k frames.
         Basically just calls step_env M times.
         """
+
         with tf.Session(graph = self.graph) as session:
-            session.run(tf.global_variables_initializer())
-            print('Initializing variables')
+            saver = tf.train.Saver() # to load and save checkpoints
+            # if save_path exists, load it
+            # we want to restore from latest version
+            if os.path.isdir('ckpts'):
+                saver.restore(session, tf.train.latest_checkpoint('ckpts'))
+                print("Loading from file")
+            else: # otherwise initialize randomly
+                session.run(tf.global_variables_initializer())
+                print("Initializing randomly")
+
             for t in range(self.train_time):
                 self.step_env(session, t)
+                # we save checkpoint every 1000 steps
+                if t % 1000 == 0:
+                    saver.save(session, self.save_path, global_step = t)
+                    print("Saving {}...".format(t))
 
 def main(unused_argv):
     agent = Agent()
