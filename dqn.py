@@ -7,7 +7,7 @@ import numpy as np
 import tensorflow as tf
 import gym
 
-import pickle
+import _pickle as pickle
 import os
 import sys
 import time
@@ -238,6 +238,7 @@ class Agent:
             # if save_dir exists, load it
             # we want to restore from latest version
             if os.path.isdir(self.save_dir):
+                print("Loading from file")
                 ckpt = tf.train.latest_checkpoint(self.save_dir)
                 num = int(ckpt[len(self.save_param_path) + 1:]) # get number of latest checkpoint
                 print('num: ', num)
@@ -248,19 +249,18 @@ class Agent:
                 # now we load the deque of experience replay
                 self.load_deque()
                 
-                print("Loading from file")
             else: # otherwise initialize randomly
+                print("Initializing randomly")
                 session.run(tf.global_variables_initializer())
                 start_t = 0
-                print("Initializing randomly")
 
             for t in range(start_t + 1, self.train_time):
                 self.step_env(session, t)
-                # we save checkpoint every 1000 steps
-                if t % 1000 == 0:
+                # we save checkpoint every 10000 steps
+                if t % 10000 == 0:
+                    print("Saving {}...".format(t))
                     saver.save(session, self.save_param_path, global_step = t)
                     self.dump_deque()
-                    print("Saving {}...".format(t))
 
 def main(unused_argv):
     agent = Agent()
