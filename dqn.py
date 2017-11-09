@@ -7,6 +7,7 @@ import numpy as np
 import tensorflow as tf
 import gym
 
+import pickle
 import os
 import time
 import random
@@ -29,7 +30,9 @@ class Agent:
         self.phi = np.zeros([1, 84, 84, 4]) # processed inputs
         self.gamma = 0.9
         self.batch_size = 32 # batch size for experience replay
-        self.save_path = 'ckpts/model' # save path for saving / loading variables
+        self.save_dir = 'ckpts' # save directory for checkpoints
+        self.save_param_path = self.save_dir + '/params' # save file for parameters
+        self.save_dq_path = self.save_dir + '/deque.p' # save file for replay memory deque
 
         self.graph = tf.Graph()
         with self.graph.as_default():
@@ -177,14 +180,14 @@ class Agent:
             obs, reward, self.done, info = self.env.step(action)
             if self.done: break
 
-        # clip reward
-        reward = 1 if reward > 0 else -1 if reward < 0 else 0
+            # clip reward
+            reward = 1 if reward > 0 else -1 if reward < 0 else 0
 
-        phi_bef = self.phi
-        self.update_phi(obs)
+            phi_bef = self.phi
+            self.update_phi(obs)
 
-        # add experience tuple for experience replay
-        self.D.append((phi_bef, action, reward, self.phi, self.done))
+            # add experience tuple for experience replay
+            self.D.append((phi_bef, action, reward, self.phi, self.done))
 
         # experience replay
         self.train(session)
@@ -199,20 +202,30 @@ class Agent:
 
         with tf.Session(graph = self.graph) as session:
             saver = tf.train.Saver() # to load and save checkpoints
-            # if save_path exists, load it
+            # if save_dir exists, load it
             # we want to restore from latest version
-            if os.path.isdir('ckpts'):
-                saver.restore(session, tf.train.latest_checkpoint('ckpts'))
+            if os.path.isdir(self.save_dir):
+                ckpt = tf.train.latest_checkpoint(self.save_dir)
+                num = int(ckpt[len(self.save_param_path) + 1:]) # get number of latest checkpoint
+                print('num: ', num)
+                saver.restore(session, ckpt)
+                start_t = num
+                self.eps = max(0.1, 1 - num * (9e-7))
+                
+                # now we load the deque of experience replay
+                self.D = pickle.load(open(self.save_dq_path, 'rb'))
                 print("Loading from file")
             else: # otherwise initialize randomly
                 session.run(tf.global_variables_initializer())
+                start_t = 0
                 print("Initializing randomly")
 
-            for t in range(self.train_time):
+            for t in range(start_t + 1, self.train_time):
                 self.step_env(session, t)
                 # we save checkpoint every 1000 steps
                 if t % 1000 == 0:
-                    saver.save(session, self.save_path, global_step = t)
+                    saver.save(session, self.save_param_path, global_step = t)
+                    pickle.dump(self.D, open(self.save_dq_path, 'wb'))
                     print("Saving {}...".format(t))
 
 def main(unused_argv):
