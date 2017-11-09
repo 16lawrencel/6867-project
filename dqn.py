@@ -9,6 +9,7 @@ import gym
 
 import pickle
 import os
+import sys
 import time
 import random
 from skimage.transform import resize
@@ -19,18 +20,20 @@ tf.logging.set_verbosity(tf.logging.INFO)
 
 class Agent:
     def __init__(self):
-        self.env = gym.make('TimePilot-v0') # environment
+        self.env_name = 'Pong-v0' # environment name
+        self.env = gym.make(self.env_name) # environment
         self.num_actions = self.env.action_space.n # number of possible actions
         self.capacity = 10000 # replay memory capacity
-        self.train_time = 10000000 # number of total frames to train
+        self.train_time = 100000 # number of total frames to train
         self.D = deque([], maxlen = self.capacity) # replay memory
         self.eps = 1 # eps-greedy
+        self.eps_step = 0.9 / (self.train_time / 10)
         self.k = 4 # frame skipping
         self.done = True # is it the start of a new episode?
         self.phi = np.zeros([1, 84, 84, 4]) # processed inputs
         self.gamma = 0.9
         self.batch_size = 32 # batch size for experience replay
-        self.save_dir = 'ckpts' # save directory for checkpoints
+        self.save_dir = self.env_name + '-ckpts' # save directory for checkpoints
         self.save_param_path = self.save_dir + '/params' # save file for parameters
         self.save_dq_path = self.save_dir + '/deque.p' # save file for replay memory deque
 
@@ -114,7 +117,7 @@ class Agent:
         Steps eps. Recall that eps decreases linearly from 1 to 0.1 
         in the first 10^6 steps, then stays constant at 0.1.
         """
-        self.eps = max(0.1, self.eps - 9e-7)
+        self.eps = max(0.1, self.eps - self.eps_step)
 
     def process_image(self, obs):
         """
@@ -194,6 +197,36 @@ class Agent:
 
         self.step_eps()
 
+    def dump_deque(self):
+        """
+        Dumps deque from saved deque file.
+        Since the deque gets very large, we use a hack to allow pickle to work (by breaking it into chunks of size 2**31 - 1)
+        See https://stackoverflow.com/questions/42653386/does-pickle-randomly-fail-with-oserror-on-large-files
+        """
+
+        max_bytes = 2**31 - 1
+        bytes_out = pickle.dumps(self.D)
+        n_bytes = sys.getsizeof(bytes_out)
+        with open(self.save_dq_path, 'wb') as f_out:
+            for i in range(0, n_bytes, max_bytes):
+                f_out.write(bytes_out[i:i + max_bytes])
+
+    def load_deque(self):
+        """
+        Load deque from saved deque file.
+        Since the deque gets very large, we use a hack to allow pickle to work (by breaking it into chunks of size 2**31 - 1)
+        See https://stackoverflow.com/questions/42653386/does-pickle-randomly-fail-with-oserror-on-large-files
+        """
+
+        max_bytes = 2**31 - 1
+        input_size = os.path.getsize(self.save_dq_path)
+        bytes_in = bytearray(0)
+        with open(self.save_dq_path, 'rb') as f_in:
+            for _ in range(0, input_size, max_bytes):
+                bytes_in += f_in.read(max_bytes)
+
+        self.D = pickle.loads(bytes_in)
+
     def run_env(self):
         """
         Runs and trains in the environment for M * k frames.
@@ -210,10 +243,11 @@ class Agent:
                 print('num: ', num)
                 saver.restore(session, ckpt)
                 start_t = num
-                self.eps = max(0.1, 1 - num * (9e-7))
-                
+                self.eps = max(0.1, 1 - num * self.eps_step)
+
                 # now we load the deque of experience replay
-                self.D = pickle.load(open(self.save_dq_path, 'rb'))
+                self.load_deque()
+                
                 print("Loading from file")
             else: # otherwise initialize randomly
                 session.run(tf.global_variables_initializer())
@@ -225,7 +259,7 @@ class Agent:
                 # we save checkpoint every 1000 steps
                 if t % 1000 == 0:
                     saver.save(session, self.save_param_path, global_step = t)
-                    pickle.dump(self.D, open(self.save_dq_path, 'wb'))
+                    self.dump_deque()
                     print("Saving {}...".format(t))
 
 def main(unused_argv):
