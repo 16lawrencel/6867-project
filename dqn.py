@@ -21,7 +21,7 @@ class Agent:
     def __init__(self):
         self.env = gym.make('TimePilot-v0') # environment
         self.num_actions = self.env.action_space.n # number of possible actions
-        self.capacity = 1000000 # replay memory capacity
+        self.capacity = 10000 # replay memory capacity
         self.train_time = 10000000 # number of total frames to train
         self.D = deque([], maxlen = self.capacity) # replay memory
         self.eps = 1 # eps-greedy
