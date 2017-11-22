@@ -6,12 +6,14 @@ Also based on my dqn code (especially for the nn architecture)
 import numpy as np
 import tensorflow as tf
 
-import gym, time, random, threading, os
+import gym, time, random, threading, os, pickle
 
 from skimage.transform import resize
 from skimage.color import rgb2gray
 
 from collections import deque
+
+import matplotlib.pyplot as plt
 
 # constants
 ENV = 'Pong-v0'
@@ -20,7 +22,7 @@ SAVE_PARAM_PATH = SAVE_DIR + '/params'
 
 NUM_ACTIONS = None # we'll change this later
 
-RUN_TIME = 15000
+RUN_TIME = 60 #3600
 THREADS = 16
 OPTIMIZERS = 4
 THREAD_DELAY = 0.001
@@ -71,6 +73,7 @@ class Brain:
             ckpt = tf.train.latest_checkpoint(SAVE_DIR)
             self.num = int(ckpt[len(SAVE_PARAM_PATH) + 1:]) # get number of latest checkpoint
             self.saver.restore(self.session, ckpt)
+            print("NUM: ", self.num)
 
         else: # otherwise initialize randomly
             print("Initializing randomly")
@@ -236,7 +239,7 @@ class Agent:
             return random.randint(0, NUM_ACTIONS - 1)
 
         else:
-            p = brain.predict_p(s)[0]
+            p = brain.predict_p(np.array([s]))[0]
 
             #a = np.argmax(p) # hard decision
             a = np.random.choice(NUM_ACTIONS, p = p) # soft decision
@@ -288,6 +291,8 @@ class Environment(threading.Thread):
         self.phi = np.zeros([84, 84, 4])
         self.s_prev = np.zeros([210, 160, 3])
 
+        self.R_list = [] # for plotting
+
     def process_image(self, s, s_prev):
         """
         Processes image by converting from [210, 160, 3] -> [84, 84]
@@ -325,8 +330,11 @@ class Environment(threading.Thread):
                 phi_bef = self.phi
                 self.update_phi(s_)
 
-                if self.render: self.env.render()
-                else: self.agent.train(phi_bef, a, r, self.phi, done)
+                if self.render:
+                    #self.env.render()
+                    pass
+                else:
+                    self.agent.train(phi_bef, a, r, self.phi, done)
 
                 R += r
 
@@ -337,6 +345,8 @@ class Environment(threading.Thread):
                 break
 
         print("Total R:", R)
+        if self.render:
+            self.R_list.append(R)
 
     def run(self):
         while not self.stop_signal:
@@ -373,7 +383,7 @@ def main(unused_argv):
     # we run all of these guys in parallel
     for o in opts: o.start()
     for e in envs: e.start()
-    #env_test.start()
+    env_test.start()
 
     time.sleep(RUN_TIME)
 
@@ -382,9 +392,22 @@ def main(unused_argv):
 
     for o in opts: o.stop()
     for o in opts: o.join()
+    env_test.stop()
+    env_test.join()
 
     print("Training finished")
     #env_test.run()
+
+    with open('R_data', 'wb') as f:
+        pickle.dump(env_test.R_list, f)
+
+    plt.plot(env_test.R_list)
+    plt.ylabel("Episodic reward")
+    plt.xlabel("Episode number")
+    plt.title("Performance on Pong")
+    plt.show()
+
+
 
 if __name__ == '__main__':
     tf.app.run()
