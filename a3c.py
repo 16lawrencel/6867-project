@@ -22,7 +22,7 @@ SAVE_PARAM_PATH = SAVE_DIR + '/params'
 
 NUM_ACTIONS = None # we'll change this later
 
-RUN_TIME = 60 #3600
+RUN_TIME = 600
 THREADS = 16
 OPTIMIZERS = 4
 THREAD_DELAY = 0.001
@@ -331,8 +331,8 @@ class Environment(threading.Thread):
                 self.update_phi(s_)
 
                 if self.render:
-                    #self.env.render()
-                    pass
+                    self.env.render()
+                    #pass
                 else:
                     self.agent.train(phi_bef, a, r, self.phi, done)
 
