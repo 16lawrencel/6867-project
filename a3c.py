@@ -16,15 +16,15 @@ from collections import deque
 import matplotlib.pyplot as plt
 
 # constants
-ENV = 'Pong-v0'
+ENV = 'TimePilot-v0'
 SAVE_DIR = ENV + '-ckpts-a3c'
 SAVE_PARAM_PATH = SAVE_DIR + '/params'
 
 NUM_ACTIONS = None # we'll change this later
 
-RUN_TIME = 600
+RUN_TIME = 100000
 THREADS = 16
-OPTIMIZERS = 4
+OPTIMIZERS = 1
 THREAD_DELAY = 0.001
 
 GAMMA = 0.99
@@ -36,12 +36,13 @@ EPS_START = 1
 EPS_STOP = 0.1
 EPS_STOP_LIST = [0.1, 0.01, 0.5]
 EPS_STOP_DIST = [0.4, 0.3, 0.3]
-EPS_STEPS = 4000000
+EPS_STEPS = 400000
 
 BATCH_SIZE = 32
 TRAIN_SIZE = 10000 # updates ocassionally
-FRAME_SKIP = 4
-LEARN_RATE = 1e-3
+FRAME_SKIP = 1
+LEARN_RATE = 7e-4
+LEARN_STEPS = 20000000
 RMS_DECAY = 0.99
 
 LOSS_V = 0.5 # v loss coefficeint
@@ -97,6 +98,7 @@ class Brain:
         self.s_t = tf.placeholder(tf.float32, shape = [None, 84, 84, 4])
         self.a_t = tf.placeholder(tf.float32, shape = [None, NUM_ACTIONS])
         self.r_t = tf.placeholder(tf.float32, shape = [None, 1])
+        self.learn_rate = tf.placeholder(tf.float32, shape = [])
 
         # input tensor shape: [batch_size, 84, 84, 4]
         # output tensor shape: [batch_size, 21, 21, 16]
@@ -156,8 +158,30 @@ class Brain:
 
         loss_total = tf.reduce_mean(loss_policy + loss_value + entropy)
 
-        optimizer = tf.train.RMSPropOptimizer(LEARN_RATE, decay = RMS_DECAY)
-        self.minimize = optimizer.minimize(loss_total)
+        optimizer = tf.train.RMSPropOptimizer(self.learn_rate, decay = RMS_DECAY)
+
+        grads, tvars = zip(*optimizer.compute_gradients(loss_total))
+        clipped_grads, _ = tf.clip_by_global_norm(grads, 40)
+        self.minimize = optimizer.apply_gradients(zip(clipped_grads, tvars))
+
+        '''
+        #WIP
+        optimizer = tf.train.AdamOptimizer(self.learn_rate)
+        grads, tvars = zip(*optimizer.compute_gradients(loss_total))
+
+        lens = [4096, 16, 8192, 32, 991232, 256, 1536, 6, 256, 1]
+        grads = [tf.reshape(grads[i], [lens[i]]) for i in range(10)]
+        tvars = [tf.reshape(tvars[i], [lens[i]]) for i in range(10)]
+        print(grads[0].shape)
+        print(tvars[0].shape)
+        clipped_grads, _ = tf.clip_by_global_norm(grads, 40)
+        print(clipped_grads[0].shape)
+        self.minimize = optimizer.apply_gradients(zip(clipped_grads, tvars))
+        '''
+
+    def get_learn_rate(self):
+        if self.num > LEARN_STEPS: return 0
+        return LEARN_RATE * (1 - self.num / LEARN_STEPS)
 
     def optimize(self):
         if len(self.train_queue) < TRAIN_SIZE:
@@ -191,7 +215,7 @@ class Brain:
             v = self.predict_v(s_[i:end])
             r_ = r[i:end] + GAMMA_N * v * done[i:end]
 
-            self.session.run(self.minimize, feed_dict = {self.s_t: s[i:end], self.a_t: a[i:end], self.r_t: r_})
+            self.session.run(self.minimize, feed_dict = {self.s_t: s[i:end], self.a_t: a[i:end], self.r_t: r_, self.learn_rate: self.get_learn_rate()})
 
         self.save_graph()
 
@@ -380,10 +404,10 @@ def main(unused_argv):
     envs = [Environment(eps_end = np.random.choice(EPS_STOP_LIST, p = EPS_STOP_DIST)) for i in range(THREADS)]
     opts = [Optimizer() for i in range(OPTIMIZERS)]
 
-    # we run all of these guys in parallel
+    #we run all of these guys in parallel
     for o in opts: o.start()
     for e in envs: e.start()
-    env_test.start()
+    #env_test.start()
 
     time.sleep(RUN_TIME)
 
@@ -392,20 +416,24 @@ def main(unused_argv):
 
     for o in opts: o.stop()
     for o in opts: o.join()
-    env_test.stop()
-    env_test.join()
+    #env_test.stop()
+    #env_test.join()
 
     print("Training finished")
     #env_test.run()
 
+    '''
     with open('R_data', 'wb') as f:
         pickle.dump(env_test.R_list, f)
+    '''
 
+    '''
     plt.plot(env_test.R_list)
     plt.ylabel("Episodic reward")
     plt.xlabel("Episode number")
     plt.title("Performance on Pong")
     plt.show()
+    '''
 
 
 
