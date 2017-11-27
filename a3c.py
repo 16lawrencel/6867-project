@@ -42,7 +42,7 @@ BATCH_SIZE = 32
 TRAIN_SIZE = 10000 # updates ocassionally
 FRAME_SKIP = 4
 LEARN_RATE = 7e-4
-LEARN_STEPS = 20000000
+LEARN_STEPS = 30000000
 RMS_DECAY = 0.99
 
 LOSS_V = 0.5 # v loss coefficeint
@@ -181,7 +181,7 @@ class Brain:
 
     def get_learn_rate(self):
         if self.num > LEARN_STEPS: return 0
-        return LEARN_RATE * (1 - self.num / LEARN_STEPS)
+        return LEARN_RATE * (1 - float(self.num) / LEARN_STEPS)
 
     def optimize(self):
         if len(self.train_queue) < TRAIN_SIZE:
@@ -200,6 +200,7 @@ class Brain:
         print("Start training network...{}".format(self.num))
         random.shuffle(train_queue) # decrease correlation
         print("LENGTH: ", len(train_queue))
+        print("LEARN RATE: ", self.get_learn_rate())
         s, a, r, s_, done = zip(*train_queue)
         s = np.array(s)
         a = np.array(a)
