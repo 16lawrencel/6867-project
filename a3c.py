@@ -27,7 +27,7 @@ RUN_TRAIN = True
 NUM_ACTIONS = 3 # we'll change this later
 
 RUN_TIME = 100000
-THREADS = 8
+THREADS = 16
 OPTIMIZERS = 1
 THREAD_DELAY = 0.001
 
@@ -164,7 +164,6 @@ class Brain:
 
         grads, tvars = zip(*optimizer.compute_gradients(loss_total))
         clipped_grads, _ = tf.clip_by_global_norm(grads, 40)
-        clipped_grads = list(map(lambda x : -x, clipped_grads))
         self.minimize = optimizer.apply_gradients(zip(clipped_grads, tvars))
 
     def get_learn_rate(self):
