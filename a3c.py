@@ -186,7 +186,7 @@ class Brain:
             self.train_queue = []
 
         print("Start training network...{}".format(self.num))
-        #random.shuffle(train_queue) # decrease correlation
+        random.shuffle(train_queue) # decrease correlation
         print("LENGTH: ", len(train_queue))
         print("LEARN RATE: ", self.get_learn_rate())
         s, a, r = zip(*train_queue)
@@ -383,6 +383,7 @@ class Environment(threading.Thread):
         if self.render:
             self.R_list.append(R)
             if len(self.R_list) % 10000 == 0:
+                print("Dumping data")
                 with open('R_data', 'wb') as f:
                     pickle.dump(self.R_list, f)
 
