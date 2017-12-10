@@ -324,6 +324,12 @@ class Environment(threading.Thread):
 
         self.R_list = [] # for plotting
 
+        if self.render and os.path.isfile('R_data'):
+            print("Loading R data from file")
+            with open('R_data', 'rb') as f:
+                self.R_list = pickle.load(f)
+                print("LENGTH: ", len(self.R_list))
+
     def process_image(self, s):
         """
         Processes image by converting from [210, 160, 3] -> [80, 80]
