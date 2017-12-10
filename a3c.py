@@ -362,7 +362,8 @@ class Environment(threading.Thread):
 
             a = self.agent.act(self.phi)
 
-            for i in range(FRAME_SKIP): # perform a for FRAME_SKIP times
+            frame_skip = 1 if self.render else FRAME_SKIP
+            for i in range(frame_skip): # perform a for FRAME_SKIP times
                 s_, r, done, info = self.env.step(a + 1)
                 if r > 1: r = 1
                 elif r < -1: r = -1
@@ -370,7 +371,8 @@ class Environment(threading.Thread):
                 self.update_phi(s_)
 
                 if self.render:
-                    self.env.render()
+                    pass
+                    #self.env.render()
                 else:
                     self.agent.train(phi_bef, a, r, self.phi, done)
 
@@ -385,6 +387,10 @@ class Environment(threading.Thread):
         print("Total R:", R)
         if self.render:
             self.R_list.append(R)
+            if len(self.R_list) % 10000 == 0:
+                with open('R_data', 'wb') as f:
+                    pickle.dump(self.R_list, f)
+
 
     def run(self):
         while not self.stop_signal:
@@ -410,8 +416,8 @@ class Optimizer(threading.Thread):
 def main(unused_argv):
     env_test = Environment(render = True, eps_start = 0, eps_end = 0)
 
-    global NUM_ACTIONS
-    NUM_ACTIONS = env_test.env.action_space.n
+    #global NUM_ACTIONS
+    #NUM_ACTIONS = env_test.env.action_space.n
     global brain
     brain = Brain() 
 
