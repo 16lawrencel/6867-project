@@ -21,7 +21,7 @@ ENV = 'Pong-v0'
 SAVE_DIR = ENV + '-ckpts-a3c'
 SAVE_PARAM_PATH = SAVE_DIR + '/params'
 
-SHOW_ENV_TEST = False
+SHOW_ENV_TEST = True
 RUN_TRAIN = True
 
 NUM_ACTIONS = 3 # we'll change this later
@@ -33,8 +33,7 @@ THREAD_DELAY = 0.001
 
 GAMMA = 0.99
 
-N_STEP_RETURN = 20
-GAMMA_N = GAMMA ** N_STEP_RETURN
+T_MAX = 20
 
 EPS_START = 1
 EPS_STOP = 0.1
@@ -190,22 +189,17 @@ class Brain:
         #random.shuffle(train_queue) # decrease correlation
         print("LENGTH: ", len(train_queue))
         print("LEARN RATE: ", self.get_learn_rate())
-        s, a, r, s_, done = zip(*train_queue)
+        s, a, r = zip(*train_queue)
         s = np.array(s)
         a = np.array(a)
         r = np.reshape(np.array(r), (-1, 1))
-        s_ = np.array(s_)
-        done = np.reshape(np.array(done), (-1, 1))
 
         n = len(s)
         for i in range(0, n, BATCH_SIZE):
             end = min(n, i + BATCH_SIZE)
             print("Training {} to {}".format(i, end))
 
-            v = self.predict_v(s_[i:end])
-            r_ = r[i:end] + GAMMA_N * v * done[i:end]
-
-            self.session.run(self.minimize, feed_dict = {self.s_t: s[i:end], self.a_t: a[i:end], self.r_t: r_, self.learn_rate: self.get_learn_rate()})
+            self.session.run(self.minimize, feed_dict = {self.s_t: s[i:end], self.a_t: a[i:end], self.r_t: r[i:end], self.learn_rate: self.get_learn_rate()})
 
         self.save_count -= 1
         if self.save_count < 0:
@@ -214,12 +208,12 @@ class Brain:
 
         print("Finished training network!")
 
-    def train_push(self, s, a, r, s_, done):
+    def train_push(self, s, a, r):
         # don't push in too many samples
         # this does mean that there are inefficiencies here
         if len(self.train_queue) >= TRAIN_SIZE: return
 
-        self.train_queue.append((s, a, r, s_, int(done)))
+        self.train_queue.append((s, a, r))
         self.num += 1
 
     def predict(self, s):
@@ -240,6 +234,7 @@ class Agent:
         self.memory = [] # for n-step return
         self.R = 0.
         self.frames = frames
+        self.t_start = frames
         print("Starting frames: ", frames)
 
     def get_eps(self):
