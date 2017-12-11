@@ -52,6 +52,8 @@ RMS_DECAY = 0.99
 LOSS_V = 0.5 # v loss coefficeint
 LOSS_ENTROPY = 0.01 # entropy coefficient
 
+GRAD_CLIP = 10000000
+
 class Brain:
     def __init__(self):
         self.train_queue = []
@@ -163,7 +165,7 @@ class Brain:
         optimizer = tf.train.RMSPropOptimizer(self.learn_rate, decay = RMS_DECAY)
 
         grads, tvars = zip(*optimizer.compute_gradients(loss_total))
-        clipped_grads, _ = tf.clip_by_global_norm(grads, 40)
+        clipped_grads, _ = tf.clip_by_global_norm(grads, GRAD_CLIP)
         self.minimize = optimizer.apply_gradients(zip(clipped_grads, tvars))
 
     def get_learn_rate(self):
