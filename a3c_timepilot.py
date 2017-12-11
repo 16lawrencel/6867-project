@@ -17,7 +17,7 @@ from collections import deque
 import matplotlib.pyplot as plt
 
 # constants
-ENV = 'Pong-v0'
+ENV = 'TimePilot-v0'
 SAVE_DIR = ENV + '-ckpts-a3c'
 SAVE_PARAM_PATH = SAVE_DIR + '/params'
 
@@ -25,7 +25,7 @@ SHOW_ENV_TEST = True
 RUN_TRAIN = False
 RENDER = True
 
-NUM_ACTIONS = 3 # we'll change this later
+NUM_ACTIONS = None # we'll change this later
 
 RUN_TIME = 100000
 THREADS = 16
