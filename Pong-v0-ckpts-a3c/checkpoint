@@ -1,6 +1,2 @@
-model_checkpoint_path: "params-25907096"
-all_model_checkpoint_paths: "params-25870364"
-all_model_checkpoint_paths: "params-25880818"
-all_model_checkpoint_paths: "params-25890388"
-all_model_checkpoint_paths: "params-25900361"
-all_model_checkpoint_paths: "params-25907096"
+model_checkpoint_path: "params-6708010"
+all_model_checkpoint_paths: "params-6708010"

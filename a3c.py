@@ -22,8 +22,8 @@ SAVE_DIR = ENV + '-ckpts-a3c'
 SAVE_PARAM_PATH = SAVE_DIR + '/params'
 
 SHOW_ENV_TEST = True
-RUN_TRAIN = True
-RENDER = False
+RUN_TRAIN = False
+RENDER = True
 
 NUM_ACTIONS = 3 # we'll change this later
 
@@ -254,8 +254,8 @@ class Agent:
         else:
             p = brain.predict_p(np.array([s]))[0]
 
-            #a = np.argmax(p) # hard decision
-            a = np.random.choice(NUM_ACTIONS, p = p) # soft decision
+            a = np.argmax(p) # hard decision
+            #a = np.random.choice(NUM_ACTIONS, p = p) # soft decision
 
             return a
     
