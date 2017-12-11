@@ -23,6 +23,7 @@ SAVE_PARAM_PATH = SAVE_DIR + '/params'
 
 SHOW_ENV_TEST = True
 RUN_TRAIN = True
+RENDER = False
 
 NUM_ACTIONS = 3 # we'll change this later
 
@@ -373,8 +374,8 @@ class Environment(threading.Thread):
                 self.update_phi(s_)
 
                 if self.render:
-                    pass
-                    #self.env.render()
+                    if RENDER:
+                        self.env.render()
                 else:
                     self.agent.train(phi_bef, a, r, self.phi, done)
 
@@ -389,7 +390,7 @@ class Environment(threading.Thread):
         print("Total R:", R)
         if self.render:
             self.R_list.append(R)
-            if len(self.R_list) % 10000 == 0:
+            if len(self.R_list) % 10 == 0:
                 print("Dumping data")
                 with open('R_data', 'wb') as f:
                     pickle.dump(self.R_list, f)
