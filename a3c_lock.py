@@ -215,8 +215,9 @@ class Brain:
         # this does mean that there are inefficiencies here
         if len(self.train_queue) >= TRAIN_SIZE: return
 
-        self.train_queue.append((s, a, r))
-        self.num += 1
+        with self.lock_queue:
+            self.train_queue.append((s, a, r))
+            self.num += 1
 
     def predict(self, s):
         return self.session.run([self.out_actions, self.out_value], feed_dict = {self.s_t: s})
