@@ -22,8 +22,8 @@ SAVE_DIR = ENV + '-ckpts-a3c'
 SAVE_PARAM_PATH = SAVE_DIR + '/params'
 
 SHOW_ENV_TEST = True
-RUN_TRAIN = True
-RENDER = False
+RUN_TRAIN = False
+RENDER = True
 
 NUM_ACTIONS = 3 # we'll change this later
 
@@ -47,13 +47,13 @@ TRAIN_SIZE = 1024 # updates ocassionally
 SAVE_FREQ = 20 # how frequently do we save
 FRAME_SKIP = 1
 LEARN_RATE = 7e-4
-LEARN_STEPS = 100000000
+LEARN_STEPS = 40000000
 RMS_DECAY = 0.99
 
 LOSS_V = 0.5 # v loss coefficeint
 LOSS_ENTROPY = 0.01 # entropy coefficient
 
-GRAD_CLIP = 10000000
+GRAD_CLIP = 40
 
 class Brain:
     def __init__(self):
@@ -254,8 +254,8 @@ class Agent:
         else:
             p = brain.predict_p(np.array([s]))[0]
 
-            #a = np.argmax(p) # hard decision
-            a = np.random.choice(NUM_ACTIONS, p = p) # soft decision
+            a = np.argmax(p) # hard decision
+            #a = np.random.choice(NUM_ACTIONS, p = p) # soft decision
 
             return a
     
