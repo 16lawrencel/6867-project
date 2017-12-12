@@ -45,7 +45,7 @@ EPS_STEPS = 400000
 BATCH_SIZE = 32
 TRAIN_SIZE = 1024 # updates ocassionally
 SAVE_FREQ = 20 # how frequently do we save
-FRAME_SKIP = 1
+FRAME_SKIP = 4
 LEARN_RATE = 7e-4
 LEARN_STEPS = 40000000
 RMS_DECAY = 0.99
@@ -327,9 +327,9 @@ class Environment(threading.Thread):
 
         self.R_list = [] # for plotting
 
-        if self.render and os.path.isfile('R_data'):
+        if self.render and os.path.isfile(R_DATA):
             print("Loading R data from file")
-            with open('R_data', 'rb') as f:
+            with open(R_DATA, 'rb') as f:
                 self.R_list = pickle.load(f)
                 print("LENGTH: ", len(self.R_list))
 
@@ -392,7 +392,7 @@ class Environment(threading.Thread):
             self.R_list.append(R)
             if len(self.R_list) % 10 == 0:
                 print("Dumping data")
-                with open('R_data', 'wb') as f:
+                with open(R_DATA, 'wb') as f:
                     pickle.dump(self.R_list, f)
 
 
