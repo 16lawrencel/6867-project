@@ -2,6 +2,7 @@
 Code is heavily based on this: https://jaromiru.com/2017/03/26/lets-make-an-a3c-implementation/
 Also based on my dqn code (especially for the nn architecture)
 """
+import os
 
 import numpy as np
 import tensorflow as tf
@@ -20,12 +21,11 @@ import matplotlib.pyplot as plt
 ENV = 'TimePilot-v0'
 SAVE_DIR = ENV + '-ckpts-a3c'
 SAVE_PARAM_PATH = SAVE_DIR + '/params'
+R_DATA = 'R_data' + os.path.basename(__file__)[len('a3c'):-len('.py')]
 
 SHOW_ENV_TEST = True
-RUN_TRAIN = False
-RENDER = True
-
-NUM_ACTIONS = None # we'll change this later
+RUN_TRAIN = True
+RENDER = False
 
 RUN_TIME = 100000
 THREADS = 16
@@ -45,7 +45,7 @@ EPS_STEPS = 400000
 BATCH_SIZE = 32
 TRAIN_SIZE = 1024 # updates ocassionally
 SAVE_FREQ = 20 # how frequently do we save
-FRAME_SKIP = 1
+FRAME_SKIP = 4
 LEARN_RATE = 7e-4
 LEARN_STEPS = 40000000
 RMS_DECAY = 0.99
@@ -327,9 +327,9 @@ class Environment(threading.Thread):
 
         self.R_list = [] # for plotting
 
-        if self.render and os.path.isfile('R_data'):
+        if self.render and os.path.isfile(R_DATA):
             print("Loading R data from file")
-            with open('R_data', 'rb') as f:
+            with open(R_DATA, 'rb') as f:
                 self.R_list = pickle.load(f)
                 print("LENGTH: ", len(self.R_list))
 
@@ -367,19 +367,19 @@ class Environment(threading.Thread):
 
             frame_skip = 1 if self.render else FRAME_SKIP
             for i in range(frame_skip): # perform a for FRAME_SKIP times
-                s_, r, done, info = self.env.step(a + 1)
-                if r > 1: r = 1
-                elif r < -1: r = -1
+                s_, r, done, info = self.env.step(a)
                 phi_bef = self.phi
                 self.update_phi(s_)
+
+                R += r
 
                 if self.render:
                     if RENDER:
                         self.env.render()
                 else:
+                    if r > 1: r = 1
+                    elif r < -1: r = -1
                     self.agent.train(phi_bef, a, r, self.phi, done)
-
-                R += r
 
                 if done or self.stop_signal:
                     break
@@ -392,7 +392,7 @@ class Environment(threading.Thread):
             self.R_list.append(R)
             if len(self.R_list) % 10 == 0:
                 print("Dumping data")
-                with open('R_data', 'wb') as f:
+                with open(R_DATA, 'wb') as f:
                     pickle.dump(self.R_list, f)
 
 
@@ -420,10 +420,10 @@ class Optimizer(threading.Thread):
 def main(unused_argv):
     env_test = Environment(render = True, eps_start = 0, eps_end = 0)
 
-    #global NUM_ACTIONS
-    #NUM_ACTIONS = env_test.env.action_space.n
+    global NUM_ACTIONS
+    NUM_ACTIONS = env_test.env.action_space.n
     global brain
-    brain = Brain() 
+    brain = Brain()
 
     frames = 0 # starting frames
     if os.path.isdir(SAVE_DIR):
