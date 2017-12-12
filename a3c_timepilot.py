@@ -24,7 +24,7 @@ SAVE_PARAM_PATH = SAVE_DIR + '/params'
 R_DATA = 'R_data' + os.path.basename(__file__)[len('a3c'):-len('.py')]
 
 SHOW_ENV_TEST = True
-RUN_TRAIN = False
+RUN_TRAIN = True
 RENDER = False
 
 RUN_TIME = 100000
