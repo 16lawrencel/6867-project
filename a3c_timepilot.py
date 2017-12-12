@@ -2,6 +2,7 @@
 Code is heavily based on this: https://jaromiru.com/2017/03/26/lets-make-an-a3c-implementation/
 Also based on my dqn code (especially for the nn architecture)
 """
+import os
 
 import numpy as np
 import tensorflow as tf
@@ -20,12 +21,11 @@ import matplotlib.pyplot as plt
 ENV = 'TimePilot-v0'
 SAVE_DIR = ENV + '-ckpts-a3c'
 SAVE_PARAM_PATH = SAVE_DIR + '/params'
+R_DATA = 'R_data' + os.path.basename(__file__)[len('a3c'):-len('.py')]
 
 SHOW_ENV_TEST = True
 RUN_TRAIN = False
 RENDER = False
-
-# NUM_ACTIONS = None # we'll change this later
 
 RUN_TIME = 100000
 THREADS = 16
@@ -368,18 +368,18 @@ class Environment(threading.Thread):
             frame_skip = 1 if self.render else FRAME_SKIP
             for i in range(frame_skip): # perform a for FRAME_SKIP times
                 s_, r, done, info = self.env.step(a)
-                if r > 1: r = 1
-                elif r < -1: r = -1
                 phi_bef = self.phi
                 self.update_phi(s_)
+
+                R += r
 
                 if self.render:
                     if RENDER:
                         self.env.render()
                 else:
+                    if r > 1: r = 1
+                    elif r < -1: r = -1
                     self.agent.train(phi_bef, a, r, self.phi, done)
-
-                R += r
 
                 if done or self.stop_signal:
                     break
