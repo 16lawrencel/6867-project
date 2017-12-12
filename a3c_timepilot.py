@@ -23,9 +23,9 @@ SAVE_PARAM_PATH = SAVE_DIR + '/params'
 
 SHOW_ENV_TEST = True
 RUN_TRAIN = False
-RENDER = True
+RENDER = False
 
-NUM_ACTIONS = None # we'll change this later
+# NUM_ACTIONS = None # we'll change this later
 
 RUN_TIME = 100000
 THREADS = 16
@@ -367,7 +367,7 @@ class Environment(threading.Thread):
 
             frame_skip = 1 if self.render else FRAME_SKIP
             for i in range(frame_skip): # perform a for FRAME_SKIP times
-                s_, r, done, info = self.env.step(a + 1)
+                s_, r, done, info = self.env.step(a)
                 if r > 1: r = 1
                 elif r < -1: r = -1
                 phi_bef = self.phi
@@ -420,10 +420,10 @@ class Optimizer(threading.Thread):
 def main(unused_argv):
     env_test = Environment(render = True, eps_start = 0, eps_end = 0)
 
-    #global NUM_ACTIONS
-    #NUM_ACTIONS = env_test.env.action_space.n
+    global NUM_ACTIONS
+    NUM_ACTIONS = env_test.env.action_space.n
     global brain
-    brain = Brain() 
+    brain = Brain()
 
     frames = 0 # starting frames
     if os.path.isdir(SAVE_DIR):
